@@ -297,6 +297,7 @@ function WeeklyScheduler(){
   const [isMobile,setIsMobile]=useState(()=>window.innerWidth<=700);
   const [mobileDay,setMobileDay]=useState(()=>{const d=new Date().getDay();return d===0?6:d-1;});
   const [touchStart,setTouchStart]=useState(null);
+  const [touchStartY,setTouchStartY]=useState(null);
 
   useEffect(()=>{
     const handleResize=()=>setIsMobile(window.innerWidth<=700);
@@ -308,16 +309,18 @@ function WeeklyScheduler(){
   const mobileDate=weekDates[mobileDay];
   const isMobileToday=mobileDate&&new Date().toDateString()===mobileDate.toDateString();
 
-  // Swipe handling
-  const handleTouchStart=e=>setTouchStart(e.touches[0].clientX);
+  // Swipe handling - only triggers on clearly horizontal swipes
+  const handleTouchStart=e=>{setTouchStart(e.touches[0].clientX);setTouchStartY(e.touches[0].clientY);};
   const handleTouchEnd=e=>{
-    if(touchStart===null)return;
-    const diff=e.changedTouches[0].clientX-touchStart;
-    if(Math.abs(diff)>60){
-      if(diff>0)setMobileDay(d=>d>0?d-1:6);
+    if(touchStart===null||touchStartY===null){setTouchStart(null);setTouchStartY(null);return;}
+    const diffX=e.changedTouches[0].clientX-touchStart;
+    const diffY=e.changedTouches[0].clientY-touchStartY;
+    // Only swipe if clearly horizontal (not scrolling vertically)
+    if(Math.abs(diffX)>70&&Math.abs(diffX)>Math.abs(diffY)*2){
+      if(diffX>0)setMobileDay(d=>d>0?d-1:6);
       else setMobileDay(d=>d<6?d+1:0);
     }
-    setTouchStart(null);
+    setTouchStart(null);setTouchStartY(null);
   };
 
   /* ── Mobile Daily View ── */
