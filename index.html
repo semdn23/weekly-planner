@@ -18,7 +18,7 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   :root{--tc:56px}
-  html,body,#root{height:100%;width:100%;overflow:hidden}
+  html,body,#root{height:100%;width:100%;overflow:hidden;overflow-x:hidden}
   body{background:#0F1117;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
   ::-webkit-scrollbar{width:6px;height:6px}
   ::-webkit-scrollbar-track{background:#1a1c25}
@@ -297,7 +297,6 @@ function WeeklyScheduler(){
   const [isMobile,setIsMobile]=useState(()=>window.innerWidth<=700);
   const [mobileDay,setMobileDay]=useState(()=>{const d=new Date().getDay();return d===0?6:d-1;});
   const [touchStart,setTouchStart]=useState(null);
-  const [touchStartY,setTouchStartY]=useState(null);
 
   useEffect(()=>{
     const handleResize=()=>setIsMobile(window.innerWidth<=700);
@@ -309,20 +308,6 @@ function WeeklyScheduler(){
   const mobileDate=weekDates[mobileDay];
   const isMobileToday=mobileDate&&new Date().toDateString()===mobileDate.toDateString();
 
-  // Swipe handling - only triggers on clearly horizontal swipes
-  const handleTouchStart=e=>{setTouchStart(e.touches[0].clientX);setTouchStartY(e.touches[0].clientY);};
-  const handleTouchEnd=e=>{
-    if(touchStart===null||touchStartY===null){setTouchStart(null);setTouchStartY(null);return;}
-    const diffX=e.changedTouches[0].clientX-touchStart;
-    const diffY=e.changedTouches[0].clientY-touchStartY;
-    // Only swipe if clearly horizontal (not scrolling vertically)
-    if(Math.abs(diffX)>70&&Math.abs(diffX)>Math.abs(diffY)*2){
-      if(diffX>0)setMobileDay(d=>d>0?d-1:6);
-      else setMobileDay(d=>d<6?d+1:0);
-    }
-    setTouchStart(null);setTouchStartY(null);
-  };
-
   /* ── Mobile Daily View ── */
   if(isMobile){
     const mDayDoneCount=mobileDayBlocks.filter(b=>b.done).length;
@@ -330,8 +315,7 @@ function WeeklyScheduler(){
     const [mobileTab,setMobileTab]=useState("day"); // "day" or "progress"
 
     return (
-      <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#0F1117",color:"#E8E6E1",minHeight:"100vh",display:"flex",flexDirection:"column"}}
-        onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#0F1117",color:"#E8E6E1",minHeight:"100vh",display:"flex",flexDirection:"column",overflowX:"hidden"}}>
 
         {/* Mobile Header */}
         <div style={{background:"linear-gradient(135deg,#161821,#1a1c28)",borderBottom:"1px solid #2a2d3a",padding:"14px 16px",position:"sticky",top:0,zIndex:100}}>
@@ -393,7 +377,7 @@ function WeeklyScheduler(){
         </div>
 
         {/* Content area */}
-        <div style={{flex:1,overflowY:"auto",padding:"8px 12px 100px"}}>
+        <div style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",padding:"8px 12px 100px"}}>
 
           {/* ── Day Tab ── */}
           {mobileTab==="day"&&(<Fragment>
@@ -567,7 +551,7 @@ function WeeklyScheduler(){
           </Fragment>)}
         </div>
 
-        {/* Bottom bar: export/import + swipe hint */}
+        {/* Bottom bar: export/import */}
         <div style={{
           position:"fixed",bottom:0,left:0,right:0,
           background:"#161821",borderTop:"1px solid #2a2d3a",
@@ -597,7 +581,6 @@ function WeeklyScheduler(){
               reader.readAsText(file);e.target.value="";
             }}/>
           </label>
-          <span style={{fontSize:10,color:"#3a3d4a",textAlign:"center",flex:1}}>← swipe →</span>
         </div>
       </div>
     );
