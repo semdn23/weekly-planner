@@ -293,6 +293,195 @@ function WeeklyScheduler(){
   const totAllDone=actTasks.reduce((s,t)=>s+getDoneHours(t.id),0);
   const hidden=countHiddenBlocks();
 
+  // Mobile detection
+  const [isMobile,setIsMobile]=useState(()=>window.innerWidth<=700);
+  const [mobileDay,setMobileDay]=useState(()=>{const d=new Date().getDay();return d===0?6:d-1;});
+  const [touchStart,setTouchStart]=useState(null);
+
+  useEffect(()=>{
+    const handleResize=()=>setIsMobile(window.innerWidth<=700);
+    window.addEventListener("resize",handleResize);
+    return()=>window.removeEventListener("resize",handleResize);
+  },[]);
+
+  const mobileDayBlocks=(getDayB(mobileDay)||[]).filter(b=>b.end>viewStartSlot&&b.start<viewEndSlot).sort((a,b)=>a.start-b.start);
+  const mobileDate=weekDates[mobileDay];
+  const isMobileToday=mobileDate&&new Date().toDateString()===mobileDate.toDateString();
+
+  // Swipe handling
+  const handleTouchStart=e=>setTouchStart(e.touches[0].clientX);
+  const handleTouchEnd=e=>{
+    if(touchStart===null)return;
+    const diff=e.changedTouches[0].clientX-touchStart;
+    if(Math.abs(diff)>60){
+      if(diff>0)setMobileDay(d=>d>0?d-1:6);
+      else setMobileDay(d=>d<6?d+1:0);
+    }
+    setTouchStart(null);
+  };
+
+  /* ── Mobile Daily View ── */
+  if(isMobile){
+    const mDayDoneCount=mobileDayBlocks.filter(b=>b.done).length;
+    const mDayTotalCount=mobileDayBlocks.length;
+
+    return (
+      <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#0F1117",color:"#E8E6E1",minHeight:"100vh",display:"flex",flexDirection:"column"}}
+        onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+
+        {/* Mobile Header */}
+        <div style={{background:"linear-gradient(135deg,#161821,#1a1c28)",borderBottom:"1px solid #2a2d3a",padding:"14px 16px",position:"sticky",top:0,zIndex:100}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#FF6B6B,#4ECDC4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700}}>W</div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Weekly Planner</div>
+                <div style={{fontSize:10,color:"#6B7280",fontFamily:"'Space Mono',monospace"}}>Week {getWeekNumber(weekOffset)}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:3}}>
+              <button onClick={()=>setWeekOffset(p=>p-1)} style={{width:28,height:28,borderRadius:6,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+              <button onClick={()=>{setWeekOffset(0);const d=new Date().getDay();setMobileDay(d===0?6:d-1);}} style={{height:28,borderRadius:6,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",cursor:"pointer",fontSize:10,padding:"0 8px",fontWeight:600,fontFamily:"'Space Mono',monospace"}}>Today</button>
+              <button onClick={()=>setWeekOffset(p=>p+1)} style={{width:28,height:28,borderRadius:6,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+            </div>
+          </div>
+
+          {/* Day tabs */}
+          <div style={{display:"flex",gap:4}}>
+            {DAY_SHORT.map((d,i)=>{
+              const dt=weekDates[i];
+              const isToday=dt&&new Date().toDateString()===dt.toDateString();
+              const isSel=mobileDay===i;
+              const dayDone=(getDayB(i)||[]).filter(b=>b.done).length;
+              const dayTotal=(getDayB(i)||[]).length;
+              return (
+                <button key={i} onClick={()=>setMobileDay(i)} style={{
+                  flex:1,padding:"6px 0",borderRadius:8,border:isSel?"1.5px solid #4ECDC4":isToday?"1.5px solid #4ECDC444":"1px solid #2a2d3a",
+                  background:isSel?"#4ECDC418":"#1E2030",cursor:"pointer",textAlign:"center",position:"relative"
+                }}>
+                  <div style={{fontSize:10,fontWeight:700,color:isSel?"#4ECDC4":isToday?"#4ECDC4":"#6B7280"}}>{d}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:isSel?"#fff":"#9CA3AF",fontFamily:"'Space Mono',monospace"}}>{dt?.getDate()}</div>
+                  {dayTotal>0&&(
+                    <div style={{fontSize:8,color:dayDone===dayTotal?"#2ECC71":"#6B7280",fontFamily:"'Space Mono',monospace",marginTop:1}}>
+                      {dayDone}/{dayTotal}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Day progress summary */}
+        <div style={{padding:"12px 16px",borderBottom:"1px solid #1E2030",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:13,fontWeight:600,color:isMobileToday?"#4ECDC4":"#E8E6E1"}}>{DAYS[mobileDay]}</span>
+          <span style={{fontSize:12,fontFamily:"'Space Mono',monospace",color:mDayDoneCount===mDayTotalCount&&mDayTotalCount>0?"#2ECC71":"#6B7280"}}>
+            {mDayDoneCount}/{mDayTotalCount} done
+          </span>
+        </div>
+
+        {/* Block list */}
+        <div style={{flex:1,overflowY:"auto",padding:"8px 12px 100px"}}>
+          {mobileDayBlocks.length===0&&(
+            <div style={{textAlign:"center",padding:"60px 20px",color:"#3a3d4a"}}>
+              <div style={{fontSize:32,marginBottom:12}}>📭</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#4a4d5a"}}>Nothing scheduled</div>
+              <div style={{fontSize:12,marginTop:4}}>Add blocks on your laptop</div>
+            </div>
+          )}
+
+          {mobileDayBlocks.map((block,_)=>{
+            const bi=getDayB(mobileDay).indexOf(block);
+            const task=tasks.find(t=>t.id===block.taskId);
+            if(!task)return null;
+            const color=COLORS[task.color];
+            const duration=(block.end-block.start)*0.5;
+            const done=block.done;
+
+            return (
+              <div key={`mb-${bi}`}
+                onClick={()=>toggleDone(mobileDay,bi)}
+                style={{
+                  display:"flex",alignItems:"center",gap:12,
+                  padding:"14px 14px",marginBottom:6,
+                  background:done?"rgba(46,204,113,0.06)":"#1E2030",
+                  border:done?"1px solid rgba(46,204,113,0.2)":"1px solid #2a2d3a",
+                  borderRadius:12,cursor:"pointer",
+                  borderLeft:`4px solid ${done?color.bg+"55":color.bg}`,
+                  transition:"all .2s",
+                  opacity:done?0.7:1,
+                }}>
+                {/* Checkbox */}
+                <div style={{
+                  width:24,height:24,minWidth:24,borderRadius:6,
+                  border:`2px solid ${done?"#2ECC71":color.bg}`,
+                  background:done?"#2ECC71":"transparent",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  transition:"all .15s"
+                }}>
+                  {done&&<span style={{fontSize:14,color:"#0F1117",fontWeight:900}}>✓</span>}
+                </div>
+
+                {/* Content */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{
+                      fontSize:15,fontWeight:600,
+                      color:done?"#6B7280":"#E8E6E1",
+                      textDecoration:done?"line-through":"none",
+                      whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"
+                    }}>{task.name}</span>
+                    {block.note&&<span style={{fontSize:12}}>📝</span>}
+                  </div>
+                  <div style={{fontSize:12,color:"#6B7280",fontFamily:"'Space Mono',monospace",marginTop:3}}>
+                    {HOURS[block.start]} – {HOURS[block.end]||"00:00"} · {duration}h
+                  </div>
+                  {block.note&&(
+                    <div style={{fontSize:11,color:"#4a4d5a",marginTop:4,lineHeight:1.4}}>{block.note}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bottom bar: export/import + swipe hint */}
+        <div style={{
+          position:"fixed",bottom:0,left:0,right:0,
+          background:"#161821",borderTop:"1px solid #2a2d3a",
+          padding:"10px 16px",paddingBottom:"calc(10px + env(safe-area-inset-bottom))",
+          display:"flex",gap:8,alignItems:"center",zIndex:100
+        }}>
+          <button onClick={()=>{
+            const data=JSON.stringify({tasks,scheduled,exportedAt:new Date().toISOString()},null,2);
+            const blob=new Blob([data],{type:"application/json"});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement("a");
+            a.href=url;a.download=`planner-backup-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();URL.revokeObjectURL(url);
+          }} style={{flex:1,padding:"10px 0",borderRadius:8,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+            ↓ Export
+          </button>
+          <label style={{flex:1,padding:"10px 0",borderRadius:8,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            ↑ Import
+            <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{
+              const file=e.target.files?.[0];if(!file)return;
+              const reader=new FileReader();
+              reader.onload=ev=>{try{
+                const data=JSON.parse(ev.target.result);
+                if(data.tasks&&data.scheduled){if(window.confirm(`Import ${data.tasks.length} tasks?\nThis replaces current data.`)){setTasks(data.tasks);setScheduled(data.scheduled);}}
+                else{window.alert("Invalid file.");}
+              }catch(err){window.alert("Error: "+err.message);}};
+              reader.readAsText(file);e.target.value="";
+            }}/>
+          </label>
+          <span style={{fontSize:10,color:"#3a3d4a",textAlign:"center",flex:1}}>← swipe →</span>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Desktop View ── */
   return (
     <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#0F1117",color:"#E8E6E1",minHeight:"100vh",userSelect:"none"}}>
 
