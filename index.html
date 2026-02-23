@@ -17,6 +17,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{--tc:56px}
   html,body,#root{height:100%;width:100%;overflow:hidden}
   body{background:#0F1117;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
   ::-webkit-scrollbar{width:6px;height:6px}
@@ -25,8 +26,13 @@
   ::-webkit-scrollbar-thumb:hover{background:#4a4d5a}
   input,textarea,select{font-family:'DM Sans',sans-serif;font-size:16px}
   @media(max-width:700px){
-    .sidebar{display:none!important}
+    :root{--tc:36px}
+    .sidebar{transform:translateX(-100%);position:absolute!important;top:0;left:0;bottom:0;z-index:50!important;transition:transform .25s ease}
+    .sidebar.open{transform:translateX(0)}
     .mobile-sidebar-toggle{display:flex!important}
+    .desktop-logo{display:none!important}
+    .grid-header,.grid-body{grid-template-columns:var(--tc) repeat(7,minmax(44px,1fr))!important}
+    .hour-range-picker{display:none!important}
   }
 </style>
 </head>
@@ -297,16 +303,16 @@ function WeeklyScheduler(){
           <button className="mobile-sidebar-toggle" onClick={()=>setShowSidebar(!showSidebar)} style={{display:"none",width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#FF6B6B,#4ECDC4)",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,border:"none",color:"#fff",cursor:"pointer"}}>
             {showSidebar?"✕":"☰"}
           </button>
-          <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#FF6B6B,#4ECDC4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700}}>W</div>
+          <div className="desktop-logo" style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#FF6B6B,#4ECDC4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700}}>W</div>
           <div>
             <h1 style={{fontSize:16,fontWeight:700,letterSpacing:"-0.02em",color:"#fff"}}>Weekly Planner</h1>
             <span style={{fontSize:11,color:"#6B7280",fontFamily:"'Space Mono',monospace"}}>Week {getWeekNumber(weekOffset)} · {formatDate(weekDates[0])} – {formatDate(weekDates[6])}</span>
           </div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-          {view==="schedule"&&(
+          {view==="schedule"&&(<div className="hour-range-picker">
             <HourRangePicker startHour={viewStartHour} endHour={viewEndHour} onStartChange={setViewStartHour} onEndChange={setViewEndHour}/>
-          )}
+          </div>)}
           <div style={{display:"flex",background:"#1E2030",borderRadius:10,padding:3,border:"1px solid #2a2d3a"}}>
             {["schedule","tasks"].map(v=>(<button key={v} onClick={()=>setView(v)} style={{padding:"5px 12px",borderRadius:8,border:"none",background:view===v?"#2a2d3a":"transparent",color:view===v?"#fff":"#6B7280",fontSize:12,fontWeight:600,cursor:"pointer",textTransform:"capitalize"}}>{v}</button>))}
           </div>
@@ -320,12 +326,10 @@ function WeeklyScheduler(){
 
       <div style={{display:"flex",height:"calc(100vh - 69px)",position:"relative"}}>
         {/* Mobile sidebar overlay */}
-        {showSidebar&&<div onClick={()=>setShowSidebar(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",zIndex:49}}/>}
+        {showSidebar&&<div onClick={()=>setShowSidebar(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",zIndex:49,display:"block"}}/>}
 
         {/* Sidebar */}
-        <div className="sidebar" style={{width:280,minWidth:280,background:"#161821",borderRight:"1px solid #2a2d3a",display:"flex",flexDirection:"column",overflow:"hidden",
-          ...(showSidebar?{position:"absolute",top:0,left:0,bottom:0,zIndex:50,display:"flex"}:{})
-        }}>
+        <div className={`sidebar${showSidebar?" open":""}`} style={{width:280,minWidth:280,background:"#161821",borderRight:"1px solid #2a2d3a",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"16px 16px 12px"}}>
             {totTarget>0&&(<Fragment>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
@@ -384,7 +388,7 @@ function WeeklyScheduler(){
               return (
                 <div key={task.id} style={{marginBottom:6,borderRadius:10,border:isSel?`2px solid ${color.bg}`:"1px solid #2a2d3a",background:isSel?"rgba(255,255,255,0.04)":"#1E2030",overflow:"hidden",opacity:act?1:0.4,transition:"all .2s"}}>
                   <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:10,cursor:act?"pointer":"default"}}
-                    onClick={()=>act&&setSelectedTask(isSel?null:task.id)}>
+                    onClick={()=>{if(act){setSelectedTask(isSel?null:task.id);if(!isSel)setShowSidebar(false);}}}>
                     <div style={{width:14,height:14,borderRadius:4,background:color.bg,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:600,color:"#E8E6E1",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{task.name}</div>
@@ -444,7 +448,7 @@ function WeeklyScheduler(){
         <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}}>
           {view==="schedule"?(
             <Fragment>
-              <div style={{display:"grid",gridTemplateColumns:"56px repeat(7,1fr)",borderBottom:"1px solid #2a2d3a",background:"#161821",position:"sticky",top:0,zIndex:10}}>
+              <div className="grid-header" style={{display:"grid",gridTemplateColumns:"56px repeat(7,1fr)",borderBottom:"1px solid #2a2d3a",background:"#161821",position:"sticky",top:0,zIndex:10}}>
                 <div style={{padding:8}}/>
                 {DAYS.map((day,i)=>{
                   const d=weekDates[i],isToday=new Date().toDateString()===d.toDateString();
@@ -464,7 +468,7 @@ function WeeklyScheduler(){
               )}
 
               <div ref={gridRef} style={{flex:1,overflowY:"auto",overflowX:"hidden",position:"relative"}}>
-                <div style={{display:"grid",gridTemplateColumns:"56px repeat(7,1fr)",position:"relative"}}>
+                <div className="grid-body" style={{display:"grid",gridTemplateColumns:"56px repeat(7,1fr)",position:"relative"}}>
                   {visibleSlots.map((time,vi)=>{
                     const ti=vi+viewStartSlot;
                     return (
@@ -500,7 +504,7 @@ function WeeklyScheduler(){
                   const isDT=dragging&&dragging.dayIdx===di&&dragging.blockIdx===bi;
                   const done=block.done;
                   return (
-                    <div key={`b-${di}-${bi}`} style={{position:"absolute",top,left:`calc(56px + ${di} * ((100% - 56px)/7) + 3px)`,width:`calc((100% - 56px)/7 - 6px)`,height,opacity:isDT?0.3:1,zIndex:5,pointerEvents:isDT?"none":"auto"}}>
+                    <div key={`b-${di}-${bi}`} style={{position:"absolute",top,left:`calc(var(--tc) + ${di} * ((100% - var(--tc))/7) + 2px)`,width:`calc((100% - var(--tc))/7 - 4px)`,height,opacity:isDT?0.3:1,zIndex:5,pointerEvents:isDT?"none":"auto"}}>
                       <div onMouseDown={e=>blockMD(e,di,bi,"move")} onContextMenu={e=>ctxOpen(e,di,bi)}
                         onClick={e=>{e.stopPropagation();setEditBlock({dayIdx:di,blockIdx:bi,block:{...block}});}}
                         style={{position:"absolute",top:clippedTop?0:4,left:0,right:0,bottom:clippedBottom?0:4,background:done?`${color.bg}18`:`${color.bg}33`,borderRadius:clippedTop&&clippedBottom?0:clippedTop?"0 0 6px 6px":clippedBottom?"6px 6px 0 0":6,borderLeft:`3px solid ${done?color.bg+"77":color.bg}`,cursor:dragging?"grabbing":"grab",display:"flex",flexDirection:"column",padding:"3px 8px 3px 6px",overflow:"hidden",transition:"background .2s"}}>
@@ -527,7 +531,7 @@ function WeeklyScheduler(){
                   const color=COLORS[task.color];
                   const vs=Math.max(dragPreview.start,viewStartSlot),ve=Math.min(dragPreview.end,viewEndSlot);
                   if(ve<=vs)return null;
-                  return (<div style={{position:"absolute",top:(vs-viewStartSlot)*SLOT_H,left:`calc(56px + ${dragPreview.dayIdx} * ((100% - 56px)/7) + 3px)`,width:`calc((100% - 56px)/7 - 6px)`,height:(ve-vs)*SLOT_H,background:`${color.bg}22`,border:`2px dashed ${color.bg}88`,borderRadius:8,zIndex:8,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  return (<div style={{position:"absolute",top:(vs-viewStartSlot)*SLOT_H,left:`calc(var(--tc) + ${dragPreview.dayIdx} * ((100% - var(--tc))/7) + 2px)`,width:`calc((100% - var(--tc))/7 - 4px)`,height:(ve-vs)*SLOT_H,background:`${color.bg}22`,border:`2px dashed ${color.bg}88`,borderRadius:8,zIndex:8,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     <span style={{fontSize:10,color:color.bg,fontWeight:700}}>{HOURS[dragPreview.start]} – {HOURS[dragPreview.end]||"00:00"}</span>
                   </div>);
                 })()}
