@@ -312,13 +312,27 @@ function WeeklyScheduler(){
   if(isMobile){
     const mDayDoneCount=mobileDayBlocks.filter(b=>b.done).length;
     const mDayTotalCount=mobileDayBlocks.length;
-    const [mobileTab,setMobileTab]=useState("day"); // "day" or "progress"
+    const [mobileTab,setMobileTab]=useState("day");
+
+    // Swipe for day tab only
+    const [swX,setSwX]=useState(null);
+    const [swY,setSwY]=useState(null);
+    const onTS=e=>{if(mobileTab==="day"){setSwX(e.touches[0].clientX);setSwY(e.touches[0].clientY);}};
+    const onTE=e=>{
+      if(swX===null||swY===null){setSwX(null);setSwY(null);return;}
+      const dx=e.changedTouches[0].clientX-swX,dy=e.changedTouches[0].clientY-swY;
+      if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2.5){
+        if(dx>0)setMobileDay(d=>d>0?d-1:6);
+        else setMobileDay(d=>d<6?d+1:0);
+      }
+      setSwX(null);setSwY(null);
+    };
 
     return (
-      <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#0F1117",color:"#E8E6E1",minHeight:"100vh",display:"flex",flexDirection:"column",overflowX:"hidden"}}>
+      <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#0F1117",color:"#E8E6E1",height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
         {/* Mobile Header */}
-        <div style={{background:"linear-gradient(135deg,#161821,#1a1c28)",borderBottom:"1px solid #2a2d3a",padding:"14px 16px",position:"sticky",top:0,zIndex:100}}>
+        <div style={{background:"linear-gradient(135deg,#161821,#1a1c28)",borderBottom:"1px solid #2a2d3a",padding:"14px 16px",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#FF6B6B,#4ECDC4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700}}>W</div>
@@ -363,7 +377,7 @@ function WeeklyScheduler(){
         </div>
 
         {/* Tab bar: Day / Progress */}
-        <div style={{display:"flex",background:"#161821",borderBottom:"1px solid #2a2d3a"}}>
+        <div style={{display:"flex",background:"#161821",borderBottom:"1px solid #2a2d3a",flexShrink:0}}>
           {[{id:"day",label:"📅 Day"},{id:"progress",label:"📊 Progress"}].map(tab=>(
             <button key={tab.id} onClick={()=>setMobileTab(tab.id)} style={{
               flex:1,padding:"10px 0",border:"none",
@@ -371,18 +385,15 @@ function WeeklyScheduler(){
               color:mobileTab===tab.id?"#E8E6E1":"#6B7280",
               fontSize:13,fontWeight:600,cursor:"pointer",
               borderBottom:mobileTab===tab.id?"2px solid #4ECDC4":"2px solid transparent",
-              transition:"all .15s"
             }}>{tab.label}</button>
           ))}
         </div>
 
-        {/* Content area */}
-        <div style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",padding:"8px 12px 100px"}}>
-
-          {/* ── Day Tab ── */}
-          {mobileTab==="day"&&(<Fragment>
-            {/* Day header */}
-            <div style={{padding:"8px 4px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        {/* ── Day Tab ── */}
+        {mobileTab==="day"&&(
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",padding:"8px 12px 16px"}}
+            onTouchStart={onTS} onTouchEnd={onTE}>
+            <div style={{padding:"4px 4px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:14,fontWeight:600,color:isMobileToday?"#4ECDC4":"#E8E6E1"}}>{DAYS[mobileDay]}</span>
               <span style={{fontSize:12,fontFamily:"'Space Mono',monospace",color:mDayDoneCount===mDayTotalCount&&mDayTotalCount>0?"#2ECC71":"#6B7280"}}>
                 {mDayDoneCount}/{mDayTotalCount} done
@@ -404,25 +415,10 @@ function WeeklyScheduler(){
               const color=COLORS[task.color];
               const duration=(block.end-block.start)*0.5;
               const done=block.done;
-
               return (
-                <div key={`mb-${bi}`}
-                  onClick={()=>toggleDone(mobileDay,bi)}
-                  style={{
-                    display:"flex",alignItems:"center",gap:12,
-                    padding:"14px 14px",marginBottom:6,
-                    background:done?"rgba(46,204,113,0.06)":"#1E2030",
-                    border:done?"1px solid rgba(46,204,113,0.2)":"1px solid #2a2d3a",
-                    borderRadius:12,cursor:"pointer",
-                    borderLeft:`4px solid ${done?color.bg+"55":color.bg}`,
-                    transition:"all .2s",opacity:done?0.7:1,
-                  }}>
-                  <div style={{
-                    width:24,height:24,minWidth:24,borderRadius:6,
-                    border:`2px solid ${done?"#2ECC71":color.bg}`,
-                    background:done?"#2ECC71":"transparent",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                  }}>
+                <div key={`mb-${bi}`} onClick={()=>toggleDone(mobileDay,bi)}
+                  style={{display:"flex",alignItems:"center",gap:12,padding:"14px 14px",marginBottom:6,background:done?"rgba(46,204,113,0.06)":"#1E2030",border:done?"1px solid rgba(46,204,113,0.2)":"1px solid #2a2d3a",borderRadius:12,cursor:"pointer",borderLeft:`4px solid ${done?color.bg+"55":color.bg}`,opacity:done?0.7:1}}>
+                  <div style={{width:24,height:24,minWidth:24,borderRadius:6,border:`2px solid ${done?"#2ECC71":color.bg}`,background:done?"#2ECC71":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     {done&&<span style={{fontSize:14,color:"#0F1117",fontWeight:900}}>✓</span>}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
@@ -438,150 +434,107 @@ function WeeklyScheduler(){
                 </div>
               );
             })}
-          </Fragment>)}
+          </div>
+        )}
 
-          {/* ── Progress Tab ── */}
-          {mobileTab==="progress"&&(<Fragment>
-            {/* Overall summary */}
+        {/* ── Progress Tab ── */}
+        {mobileTab==="progress"&&(
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",padding:"10px 12px 16px"}}>
+
+            {/* Compact totals row */}
+            <div style={{display:"flex",gap:6,marginBottom:10}}>
+              <div style={{flex:1,background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:"#6B7280",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Scheduled</div>
+                <div style={{fontSize:18,fontWeight:700,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{totAllSched}h</div>
+              </div>
+              <div style={{flex:1,background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:"#2ECC71",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>✓ Done</div>
+                <div style={{fontSize:18,fontWeight:700,fontFamily:"'Space Mono',monospace",color:"#2ECC71"}}>{totAllDone}h</div>
+              </div>
+              {totTarget>0&&(
+                <div style={{flex:1,background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                  <div style={{fontSize:9,color:"#5DADE2",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Goal</div>
+                  <div style={{fontSize:18,fontWeight:700,fontFamily:"'Space Mono',monospace",color:totDone>=totTarget?"#2ECC71":"#5DADE2"}}>{Math.round((totDone/Math.max(totTarget,1))*100)}%</div>
+                </div>
+              )}
+            </div>
+
+            {/* Goal progress bar */}
             {totTarget>0&&(
-              <div style={{background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:12,padding:16,marginBottom:8,marginTop:4}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#E8E6E1",marginBottom:12}}>Goal Tasks</div>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                  <span style={{fontSize:12,color:"#5DADE2",fontWeight:600}}>⬡ Scheduled</span>
-                  <span style={{fontSize:12,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{totSched}h / {totTarget}h</span>
+              <div style={{background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:10,padding:"10px 12px",marginBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{fontSize:11,color:"#5DADE2",fontWeight:600}}>⬡ Goal Scheduled</span>
+                  <span style={{fontSize:11,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{totSched}/{totTarget}h</span>
                 </div>
-                <div style={{height:8,background:"#161821",borderRadius:4,overflow:"hidden",marginBottom:10}}>
-                  <div style={{height:"100%",width:`${Math.min(100,(totSched/Math.max(totTarget,1))*100)}%`,background:totSched>=totTarget?"linear-gradient(90deg,#5DADE2,#4ECDC4)":"linear-gradient(90deg,#FFB347,#FF6B6B)",borderRadius:4,transition:"width .4s"}}/>
+                <div style={{height:6,background:"#161821",borderRadius:3,overflow:"hidden",marginBottom:8}}>
+                  <div style={{height:"100%",width:`${Math.min(100,(totSched/Math.max(totTarget,1))*100)}%`,background:totSched>=totTarget?"linear-gradient(90deg,#5DADE2,#4ECDC4)":"linear-gradient(90deg,#FFB347,#FF6B6B)",borderRadius:3}}/>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                  <span style={{fontSize:12,color:"#2ECC71",fontWeight:600}}>✓ Completed</span>
-                  <span style={{fontSize:12,fontFamily:"'Space Mono',monospace",color:"#2ECC71"}}>{totDone}h / {totTarget}h ({totTarget>0?Math.round((totDone/totTarget)*100):0}%)</span>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{fontSize:11,color:"#2ECC71",fontWeight:600}}>✓ Goal Done</span>
+                  <span style={{fontSize:11,fontFamily:"'Space Mono',monospace",color:"#2ECC71"}}>{totDone}/{totTarget}h</span>
                 </div>
-                <div style={{height:8,background:"#161821",borderRadius:4,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${Math.min(100,(totDone/Math.max(totTarget,1))*100)}%`,background:"linear-gradient(90deg,#2ECC71,#4ECDC4)",borderRadius:4,transition:"width .4s"}}/>
+                <div style={{height:6,background:"#161821",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${Math.min(100,(totDone/Math.max(totTarget,1))*100)}%`,background:"linear-gradient(90deg,#2ECC71,#4ECDC4)",borderRadius:3}}/>
                 </div>
               </div>
             )}
 
-            {noGoalTasks.length>0&&(
-              <div style={{background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:12,padding:16,marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#E8E6E1",marginBottom:12}}>Regular Tasks</div>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                  <span style={{fontSize:12,color:"#6C7A89",fontWeight:600}}>Scheduled</span>
-                  <span style={{fontSize:12,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{noGoalSched}h</span>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-                  <span style={{fontSize:12,color:"#6C7A89",fontWeight:600}}>Completed</span>
-                  <span style={{fontSize:12,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{noGoalDone}h</span>
-                </div>
-                {noGoalSched>0&&(
-                  <div style={{height:8,background:"#161821",borderRadius:4,overflow:"hidden",marginTop:8,position:"relative"}}>
-                    <div style={{position:"absolute",height:"100%",width:"100%",background:"#6C7A8922"}}/>
-                    <div style={{position:"absolute",height:"100%",width:`${Math.min(100,(noGoalDone/noGoalSched)*100)}%`,background:"linear-gradient(90deg,#6C7A89,#9CA3AF)",borderRadius:4,transition:"width .4s"}}/>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Per-task breakdown */}
-            <div style={{fontSize:12,fontWeight:700,color:"#6B7280",textTransform:"uppercase",letterSpacing:"0.05em",padding:"12px 4px 8px"}}>Per Task</div>
-
+            {/* Per task - compact rows */}
             {tasks.map(task=>{
               const act=isActive(task);if(!act)return null;
               const color=COLORS[task.color];
               const sHrs=getSchedHours(task.id),dHrs=getDoneHours(task.id);
               const hasGoal=task.hasGoal!==false;
-              const sPct=hasGoal?Math.min(100,(sHrs/Math.max(task.hoursPerWeek,0.5))*100):0;
               const dPct=hasGoal?Math.min(100,(dHrs/Math.max(task.hoursPerWeek,0.5))*100):0;
 
               return (
-                <div key={task.id} style={{background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:12,padding:14,marginBottom:6}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                    <div style={{width:14,height:14,borderRadius:4,background:color.bg}}/>
-                    <span style={{fontSize:14,fontWeight:600,flex:1}}>{task.name}</span>
-                    {!hasGoal&&<span style={{fontSize:10,color:"#4a4d5a",background:"#161821",padding:"2px 8px",borderRadius:4}}>no goal</span>}
+                <div key={task.id} style={{background:"#1E2030",border:"1px solid #2a2d3a",borderRadius:10,padding:"10px 12px",marginBottom:4}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:hasGoal?6:0}}>
+                    <div style={{width:10,height:10,borderRadius:3,background:color.bg,flexShrink:0}}/>
+                    <span style={{fontSize:13,fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{task.name}</span>
+                    <span style={{fontSize:11,fontFamily:"'Space Mono',monospace",color:"#2ECC71",flexShrink:0}}>{dHrs}h✓</span>
+                    <span style={{fontSize:11,fontFamily:"'Space Mono',monospace",color:"#6B7280",flexShrink:0}}>
+                      {hasGoal?`/ ${task.hoursPerWeek}h`:`${sHrs}h`}
+                    </span>
                   </div>
-
-                  {hasGoal?(
-                    <Fragment>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                        <span style={{fontSize:11,color:"#6B7280"}}>Scheduled</span>
-                        <span style={{fontSize:11,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{sHrs}h / {task.hoursPerWeek}h</span>
-                      </div>
-                      <div style={{height:6,background:"#161821",borderRadius:3,overflow:"hidden",marginBottom:8}}>
-                        <div style={{height:"100%",width:`${sPct}%`,background:`${color.bg}66`,borderRadius:3,transition:"width .3s"}}/>
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                        <span style={{fontSize:11,color:"#2ECC71"}}>✓ Completed</span>
-                        <span style={{fontSize:11,fontFamily:"'Space Mono',monospace",color:dPct>=100?"#2ECC71":"#9CA3AF"}}>{dHrs}h / {task.hoursPerWeek}h ({Math.round(dPct)}%)</span>
-                      </div>
-                      <div style={{height:6,background:"#161821",borderRadius:3,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:`${dPct}%`,background:"#2ECC71",borderRadius:3,transition:"width .3s"}}/>
-                      </div>
-                      {task.weeks!==null&&<div style={{fontSize:10,color:"#4a4d5a",marginTop:6}}>{task.weeks} week duration</div>}
-                    </Fragment>
-                  ):(
-                    <div style={{display:"flex",gap:16}}>
-                      <div>
-                        <div style={{fontSize:10,color:"#6B7280",marginBottom:2}}>Scheduled</div>
-                        <div style={{fontSize:16,fontWeight:700,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{sHrs}h</div>
-                      </div>
-                      <div>
-                        <div style={{fontSize:10,color:"#2ECC71",marginBottom:2}}>Completed</div>
-                        <div style={{fontSize:16,fontWeight:700,fontFamily:"'Space Mono',monospace",color:"#2ECC71"}}>{dHrs}h</div>
-                      </div>
+                  {hasGoal&&(
+                    <div style={{height:5,background:"#161821",borderRadius:3,overflow:"hidden",position:"relative"}}>
+                      <div style={{position:"absolute",height:"100%",width:`${Math.min(100,(sHrs/Math.max(task.hoursPerWeek,0.5))*100)}%`,background:`${color.bg}33`,borderRadius:3}}/>
+                      <div style={{position:"absolute",height:"100%",width:`${dPct}%`,background:color.bg,borderRadius:3}}/>
                     </div>
                   )}
                 </div>
               );
             })}
 
-            {/* Total */}
-            <div style={{background:"#161821",border:"1px solid #2a2d3a",borderRadius:12,padding:14,marginTop:8,display:"flex",justifyContent:"space-around",textAlign:"center"}}>
-              <div>
-                <div style={{fontSize:10,color:"#6B7280",marginBottom:4,fontWeight:600,textTransform:"uppercase"}}>Total Scheduled</div>
-                <div style={{fontSize:20,fontWeight:700,fontFamily:"'Space Mono',monospace",color:"#9CA3AF"}}>{totAllSched}h</div>
-              </div>
-              <div style={{width:1,background:"#2a2d3a"}}/>
-              <div>
-                <div style={{fontSize:10,color:"#2ECC71",marginBottom:4,fontWeight:600,textTransform:"uppercase"}}>Total Done</div>
-                <div style={{fontSize:20,fontWeight:700,fontFamily:"'Space Mono',monospace",color:"#2ECC71"}}>{totAllDone}h</div>
-              </div>
+            {/* Export/Import - inline at bottom of progress */}
+            <div style={{display:"flex",gap:6,marginTop:12}}>
+              <button onClick={()=>{
+                const data=JSON.stringify({tasks,scheduled,exportedAt:new Date().toISOString()},null,2);
+                const blob=new Blob([data],{type:"application/json"});
+                const url=URL.createObjectURL(blob);
+                const a=document.createElement("a");
+                a.href=url;a.download=`planner-backup-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();URL.revokeObjectURL(url);
+              }} style={{flex:1,padding:"10px 0",borderRadius:8,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                ↓ Export
+              </button>
+              <label style={{flex:1,padding:"10px 0",borderRadius:8,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                ↑ Import
+                <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{
+                  const file=e.target.files?.[0];if(!file)return;
+                  const reader=new FileReader();
+                  reader.onload=ev=>{try{
+                    const data=JSON.parse(ev.target.result);
+                    if(data.tasks&&data.scheduled){if(window.confirm(`Import ${data.tasks.length} tasks?\nThis replaces current data.`)){setTasks(data.tasks);setScheduled(data.scheduled);}}
+                    else{window.alert("Invalid file.");}
+                  }catch(err){window.alert("Error: "+err.message);}};
+                  reader.readAsText(file);e.target.value="";
+                }}/>
+              </label>
             </div>
-          </Fragment>)}
-        </div>
-
-        {/* Bottom bar: export/import */}
-        <div style={{
-          position:"fixed",bottom:0,left:0,right:0,
-          background:"#161821",borderTop:"1px solid #2a2d3a",
-          padding:"10px 16px",paddingBottom:"calc(10px + env(safe-area-inset-bottom))",
-          display:"flex",gap:8,alignItems:"center",zIndex:100
-        }}>
-          <button onClick={()=>{
-            const data=JSON.stringify({tasks,scheduled,exportedAt:new Date().toISOString()},null,2);
-            const blob=new Blob([data],{type:"application/json"});
-            const url=URL.createObjectURL(blob);
-            const a=document.createElement("a");
-            a.href=url;a.download=`planner-backup-${new Date().toISOString().slice(0,10)}.json`;
-            a.click();URL.revokeObjectURL(url);
-          }} style={{flex:1,padding:"10px 0",borderRadius:8,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-            ↓ Export
-          </button>
-          <label style={{flex:1,padding:"10px 0",borderRadius:8,border:"1px solid #2a2d3a",background:"#1E2030",color:"#9CA3AF",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            ↑ Import
-            <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{
-              const file=e.target.files?.[0];if(!file)return;
-              const reader=new FileReader();
-              reader.onload=ev=>{try{
-                const data=JSON.parse(ev.target.result);
-                if(data.tasks&&data.scheduled){if(window.confirm(`Import ${data.tasks.length} tasks?\nThis replaces current data.`)){setTasks(data.tasks);setScheduled(data.scheduled);}}
-                else{window.alert("Invalid file.");}
-              }catch(err){window.alert("Error: "+err.message);}};
-              reader.readAsText(file);e.target.value="";
-            }}/>
-          </label>
-        </div>
+          </div>
+        )}
       </div>
     );
   }
